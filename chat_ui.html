@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Llama Chat</title>
+  <style>
+    body { font-family: Arial; padding: 20px; max-width: 600px; margin: auto; }
+    #chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    .msg { margin: 5px 0; }
+    .user { font-weight: bold; color: blue; }
+    .bot { font-weight: bold; color: green; }
+  </style>
+</head>
+<body>
+  <h2>Ask Llama a Question</h2>
+  <div id="chat-box"></div>
+  <input id="question" type="text" style="width: 80%;" />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("question");
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage("You", message, "user");
+
+      const res = await fetch("http://localhost:8000/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: message })
+      });
+      const data = await res.json();
+      addMessage("Llama", data.response, "bot");
+      input.value = "";
+    }
+
+    function addMessage(sender, text, cls) {
+      const chatBox = document.getElementById("chat-box");
+      const msg = document.createElement("div");
+      msg.className = "msg " + cls;
+      msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
