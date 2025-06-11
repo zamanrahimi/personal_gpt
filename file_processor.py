@@ -1,75 +1,10 @@
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from fastapi.responses import HTMLResponse
-from pathlib import Path
 import os
 from PyPDF2 import PdfReader
 import pandas as pd
 import docx
-
-# llama-index imports
-from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Settings
-from llama_index.llms.ollama import Ollama
-from llama_index.embeddings.ollama import OllamaEmbedding
-
-
-
-
-app = FastAPI()
-
-# Allow frontend to call backend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Setup LLM and index
-Settings.llm = Ollama(model="llama3")
-Settings.embed_model = OllamaEmbedding(model_name="llama3")
-
-
-documents = SimpleDirectoryReader("./docs").load_data()
-index = VectorStoreIndex.from_documents(documents)
-query_engine = index.as_query_engine()
-
-class QueryInput(BaseModel):
-    question: str
-
-@app.post("/ask")
-async def ask_question(query: QueryInput):
-    try:
-        response = query_engine.query(query.question)
-        return {"response": str(response)}
-    except Exception as e:
-        return {"response": f"Error: {str(e)}"}
-
-@app.get("/", response_class=HTMLResponse)
-async def serve_chat_ui():
-    return Path("chat_ui.html").read_text()
-
-@app.route('/ask', methods=['POST'])
-def ask():
-    question = request.form.get('question')
-    files = request.files.getlist('files')
-    
-    context = ""
-    if files:
-        for file in files:
-            if file.filename:
-                file_content = FileProcessor.process_file(file)
-                context += f"\nContent from {file.filename}:\n{file_content}\n"
-    
-    # Add the file content to your prompt
-    if context:
-        question = f"Context from files:\n{context}\n\nQuestion: {question}"
-    
-    # Process with your existing model
-    response = your_model.generate(question)
-    
-    return jsonify({"response": response})
+import markdown
+from bs4 import BeautifulSoup
+import csv
 
 class FileProcessor:
     @staticmethod
@@ -134,7 +69,4 @@ class FileProcessor:
     @staticmethod
     def _process_word(file):
         doc = docx.Document(file)
-        return "\n".join([paragraph.text for paragraph in doc.paragraphs])
-
-if __name__ == '__main__':
-    app.run(port=8000)
+        return "\n".join([paragraph.text for paragraph in doc.paragraphs]) 
