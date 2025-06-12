@@ -57,7 +57,8 @@ resource "aws_instance" "hello_world" {
               usermod -a -G docker ec2-user
               systemctl enable docker
 
-              
+              #Instal Git 
+              yum install git 
             EOF
 
 
