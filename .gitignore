@@ -27,6 +27,18 @@ build/
 
 # Local development settings
 .DS_Store 
+
+# terraform 
+# Terraform
 .terraform/
 .terraform.lock.hcl
 terraform.tfstate
+terraform.tfstate.backup
+crash.log
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
