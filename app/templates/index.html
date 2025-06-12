@@ -1,11 +1,236 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>FastAPI App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal GPT</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      height: 100vh;
+      background-color: #f8f9fa;
+    }
+
+    .chat-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      max-width: 900px;
+      margin: 0 auto;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .chat-header {
+      padding: 1rem;
+      border-bottom: 1px solid #dee2e6;
+      background-color: white;
+    }
+
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background-color: #f8f9fa;
+    }
+
+    .msg {
+      margin: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .msg-content {
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      width: 100%;
+      white-space: pre-wrap;
+    }
+
+    .msg-content .char {
+      opacity: 0;
+      animation: fadeIn 0.01s forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .user .msg-content {
+      background-color: #0d6efd;
+      color: white;
+      align-self: flex-end;
+      max-width: 85%;
+    }
+
+    .bot .msg-content {
+      background-color: #e9ecef;
+      color: #212529;
+      align-self: flex-start;
+      width: 100%;
+    }
+
+    .input-area {
+      padding: 1rem;
+      background-color: white;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .input-group {
+      background-color: white;
+    }
+
+    .form-control:focus {
+      box-shadow: none;
+      border-color: #0d6efd;
+    }
+
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0.75rem 1rem;
+      background-color: #e9ecef;
+      border-radius: 1rem;
+      width: fit-content;
+      margin: 1rem 0;
+    }
+
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background-color: #6c757d;
+      border-radius: 50%;
+      animation: typing 1s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.3s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+  </style>
 </head>
 <body>
-    <h1>Deployed - Hello from FastAPI in Docker on EC2!</h1>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2 class="text-center mb-0">Personal GPT</h2>
+    </div>
+    
+    <div id="chat-box"></div>
+    
+    <div class="input-area">
+      <div class="input-group">
+        <input type="text" id="question" class="form-control" placeholder="Type your message here..." aria-label="Message">
+        <button class="btn btn-primary" type="button" id="sendButton" onclick="sendMessage()">
+          <span class="button-content">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-send" viewBox="0 0 16 16">
+              <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.916.314l-2.857-7.13a.5.5 0 0 0-.574-.386l-.833.266a.5.5 0 0 1-.65-.65l.266-.833a.5.5 0 0 0-.386-.574L.146 6.115a.5.5 0 0 1 .314-.916L14.547.036a.5.5 0 0 1 .54.11ZM6.637 10.07l7.494-7.494-1.895 4.738a.5.5 0 0 1-.416.325l-4.738 1.895Zm1.949 1.949-1.895 4.738a.5.5 0 0 1-.325.416l-4.738-1.895 7.494-7.494Z"/>
+            </svg>
+          </span>
+          <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+  </div>
 
-    <li>Check if git is installed</li>
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("question");
+      const button = document.getElementById("sendButton");
+      const buttonContent = button.querySelector('.button-content');
+      const spinner = button.querySelector('.spinner-border');
+      const message = input.value.trim();
+      if (!message) return;
+
+      // Disable input and show loading state
+      input.disabled = true;
+      button.disabled = true;
+      buttonContent.classList.add('d-none');
+      spinner.classList.remove('d-none');
+
+      addMessage(message, "user");
+      
+      // Add typing indicator
+      const typingIndicator = document.createElement("div");
+      typingIndicator.className = "typing-indicator";
+      typingIndicator.innerHTML = '<span></span><span></span><span></span>';
+      document.getElementById("chat-box").appendChild(typingIndicator);
+      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+
+      try {
+        const res = await fetch("http://localhost:8000/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: message })
+        });
+        const data = await res.json();
+        // Remove typing indicator before adding response
+        typingIndicator.remove();
+        await addTypingMessage(data.response, "bot");
+      } catch (error) {
+        // Remove typing indicator before adding error message
+        typingIndicator.remove();
+        await addTypingMessage("Sorry, there was an error processing your request.", "bot");
+      }
+
+      // Reset input and button state
+      input.value = "";
+      input.disabled = false;
+      button.disabled = false;
+      buttonContent.classList.remove('d-none');
+      spinner.classList.add('d-none');
+      input.focus();
+    }
+
+    async function addTypingMessage(text, cls) {
+      const chatBox = document.getElementById("chat-box");
+      const msg = document.createElement("div");
+      msg.className = "msg " + cls;
+      const content = document.createElement("div");
+      content.className = "msg-content";
+      msg.appendChild(content);
+      chatBox.appendChild(msg);
+      
+      // Split text into characters and add them one by one
+      const chars = text.split('');
+      for (let i = 0; i < chars.length; i++) {
+        const charSpan = document.createElement("span");
+        charSpan.className = "char";
+        charSpan.textContent = chars[i];
+        content.appendChild(charSpan);
+        
+        // Add a small random delay between characters
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 10 + 5));
+      }
+      
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function addMessage(text, cls) {
+      const chatBox = document.getElementById("chat-box");
+      const msg = document.createElement("div");
+      msg.className = "msg " + cls;
+      msg.innerHTML = `<div class="msg-content">${text}</div>`;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Allow sending message with Enter key
+    document.getElementById("question").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        sendMessage();
+      }
+    });
+  </script>
 </body>
 </html>
