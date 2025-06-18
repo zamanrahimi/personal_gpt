@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  fastapi-app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - ollama
+    environment:
+      # - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      sh -c "ollama pull llama3 && ollama serve"
+      # 👆 This pulls llama3 before starting the server
+
+volumes:
+  ollama_data:

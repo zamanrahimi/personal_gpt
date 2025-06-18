@@ -2,20 +2,27 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 import os
 from PyPDF2 import PdfReader
 import pandas as pd
 import docx
-import markdown
-from bs4 import BeautifulSoup
-from flask import request, jsonify
 
 # llama-index imports
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Settings
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.ollama import OllamaEmbedding
+
+
+
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
+
+import os
+
+templates = Jinja2Templates(directory="templates")
+
+
 
 app = FastAPI()
 
@@ -27,13 +34,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set up Jinja2 templates
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+
+
+# ollama_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+# Settings.llm = Ollama(model="llama3", base_url=ollama_url)
+# Settings.embed_model = OllamaEmbedding(model_name="llama3", base_url=ollama_url)
 
 # Setup LLM and index
+
+
+# # local ollama
 Settings.llm = Ollama(model="llama3")
 Settings.embed_model = OllamaEmbedding(model_name="llama3")
+
+
 
 documents = SimpleDirectoryReader("./docs").load_data()
 index = VectorStoreIndex.from_documents(documents)
@@ -54,6 +69,7 @@ async def ask_question(query: QueryInput):
 async def serve_chat_ui(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+
 @app.route('/ask', methods=['POST'])
 def ask():
     question = request.form.get('question')
@@ -66,9 +82,11 @@ def ask():
                 file_content = FileProcessor.process_file(file)
                 context += f"\nContent from {file.filename}:\n{file_content}\n"
     
+    # Add the file content to your prompt
     if context:
         question = f"Context from files:\n{context}\n\nQuestion: {question}"
     
+    # Process with your existing model
     response = your_model.generate(question)
     
     return jsonify({"response": response})
